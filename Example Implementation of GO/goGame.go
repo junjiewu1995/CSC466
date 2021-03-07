@@ -260,6 +260,6 @@ func (gm *GoFishGame) Play() {
 
 func main() {
 	//5 CPU players
-    gm := NewGoFishGame(false, true, true)
+    gm := NewGoFishGame(false, false, false, false, false)
     gm.Play()
 }
