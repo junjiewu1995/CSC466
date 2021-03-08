@@ -1,11 +1,20 @@
-package goFish
+package helper
 
-/* RPC Definition */
-import "os"
-import "strconv"
+import (
+	"os"
+	"strconv"
+)
 
-/* RPC Definition */
-type Args struct {X int}
+type Card struct {
+	Value string
+	Suit string
+	Used bool
+}
+
+type Pairs struct {
+	One Card
+	Two Card
+}
 
 type Reply struct {
 	PlayerNum int
@@ -15,9 +24,8 @@ type Reply struct {
 // in /var/tmp, for the master
 // Can't use the current directory since
 // Athena AFS doesn't support UNIX-domain sockets
-func masterSock() string {
+func MasterSock() string {
 	s := "/var/tmp/824-mr-"
 	s += strconv.Itoa(os.Getuid())
 	return s
 }
-
