@@ -1,14 +1,21 @@
 package main
 
 import (
-	. "../helper"
 	"fmt"
 	"log"
 	"net/rpc"
 )
+import . "../helper"
 
-func goFishP() {
-	fmt.Println("ABC")
+type Player struct {
+	ID 			int
+	Hand 		[]Card
+	Pairs 		[]Pairs
+	Opponents 	[]Player
+}
+
+type GoFishGameReply struct {
+	Turn 		int
 }
 
 //
@@ -28,7 +35,22 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	return false
 }
 
+func goFishP() {
+	fmt.Println("GoFishPlayer")
+}
+
+func (p *Player) CallCardRequest() {
+	args := CardRequest{}
+	reply := CardRequestReply{}
+	// Ask for a Card Components
+	if !call("GoFishServer.RequestForCard", args, &reply) {
+	    fmt.Println("Hello World :)")
+	    return
+	}
+}
+
 func main () {
-	fmt.Println("ABC")
+	gsc := Player{}
+	gsc.CallCardRequest()
 }
 
