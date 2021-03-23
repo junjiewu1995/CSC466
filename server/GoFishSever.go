@@ -8,12 +8,15 @@ import (
 	"net/rpc"
 	"os"
 	"sync"
+	"math/rand"
+	"time"
 )
 
 import . "../CallingUtilities"
 
 
 type GoFishServer struct {
+	Deck			[]Card
 	Mu 				sync.Mutex
 	PlayerCounter 	int
 	dead            bool
@@ -47,6 +50,33 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 	reply.Turn = 1
 
 	return nil
+}
+
+//Fills gfs.Deck with 52 shuffled Cards
+func (gfs *GoFishServer) LoadCard() {
+	//ensure Deck is empty to start
+	gfs.Deck := []Card{}
+	
+	//values a card can be
+	cardValues := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}
+
+	//Create 52 new cards, not shuffled, in gfs.Deck
+	for i := 0; i < 13; i++ {
+		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "clubs"})
+	}
+	for i := 0; i < 13; i++ {
+		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "diamonds"})
+	}
+	for i := 0; i < 13; i++ {
+		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "hearts"})
+	}
+	for i := 0; i < 13; i++ {
+		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "spades"})
+	}
+
+	//shuffle gfs.Deck
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(gfs.Deck), func(i, j int) { gfs.Deck[i], gfs.Deck[j] = gfs.Deck[j], gfs.Deck[i] })
 }
 
 func (gfs *GoFishServer) printLine() {
