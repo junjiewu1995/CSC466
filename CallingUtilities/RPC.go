@@ -5,8 +5,20 @@ import (
 	"strconv"
 )
 
+
+type Player struct {
+	ID 			int
+	Hand 		[]Card
+	Pairs 		[]Pairs
+	Opponents 	[]Player
+}
+
 type Args struct {
 	X int
+}
+
+type Reply struct {
+	PlayerNum int
 }
 
 type Card struct {
@@ -20,19 +32,18 @@ type Pairs struct {
 	Two Card
 }
 
-type Reply struct {
-	PlayerNum int
-}
 
 type CardRequestReply struct {
 	Turn 			int
 	GoFishGame		bool
+	ID              int
 }
 
 type CardRequest struct {
 	GoFishGame 		bool
+	ID              int
+	Player          Player
 }
-
 
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the master

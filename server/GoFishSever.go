@@ -10,20 +10,31 @@ import (
 	"sync"
 )
 
-import . "../helper"
+import . "../CallingUtilities"
 
-
-type Player struct {
-	ID 			int
-	Hand 		[]Card
-	Pairs 		[]Pairs
-	Opponents 	[]Player
-}
 
 type GoFishServer struct {
 	Mu 				sync.Mutex
 	PlayerCounter 	int
 	dead            bool
+	Players         []Player
+}
+
+func (gfs *GoFishServer) EnterGame (ask *CardRequest, reply *CardRequestReply) error {
+
+    /* Lock for each players */
+    gfs.Mu.Lock()
+    defer gfs.Mu.Unlock()
+
+    /* No More than 7 players */
+    if gfs.PlayerCounter < 7 {
+
+        /* Add up the Player number */
+        reply.ID = gfs.PlayerCounter
+        gfs.PlayerCounter += 1
+    }
+
+    return nil
 }
 
 func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestReply) error {
@@ -59,6 +70,7 @@ func (gfs *GoFishServer) server() {
 
 
 func (gfs *GoFishServer)serverStateSet() *GoFishServer {
+
 	return gfs
 }
 
@@ -69,6 +81,8 @@ func StartServer () *GoFishServer {
 
     /* Construct the Server Struct */
 	gfs := GoFishServer{}
+
+	gfs.PlayerCounter = 0
 
 	/* Calling server method */
 	gfs.server()
