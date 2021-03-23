@@ -63,10 +63,12 @@ func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestRe
     defer gfs.Mu.Unlock()
 
     var p Player
-    p.ID = gfs.PlayerCounter
 
     /* No More than 7 players */
     if gfs.PlayerCounter < 7 {
+
+        /* assign player info */
+        p.ID = gfs.PlayerCounter
 
         /* Add up the Player number */
         reply.ID = gfs.PlayerCounter
@@ -79,7 +81,6 @@ func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestRe
     }
 
     /* Once the Player meet the decides number Game starts */
-
     if gfs.PlayerCounter == gfs.TotalPlayers {
         fmt.Println("Game Starts ... ")
         gfs.gameStart()
@@ -88,13 +89,31 @@ func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestRe
     return nil
 }
 
+/*
+ * gameStart => LoadCards()
+ *           => AssignCards()
+*/
+
 func (gfs *GoFishServer) gameStart () {
     gfs.LoadCard()
+    gfs.assignCard()
+}
 
+func (gfs *GoFishServer) assignCard () error {
+
+    for idx, _ := range gfs.Players {
+        for x, _ := range gfs.Deck {
+           var num = 0
+           if num < 5 {
+              gfs.Players[idx].Hand = append(gfs.Players[idx].Hand, CardValue)
+              num = num + 1
+           }
+        }
+    }
+    return nil
 }
 
 func (gfs *GoFishServer) GetStatusOfGame () {
-
 
 }
 
@@ -103,7 +122,6 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 	gfs.Mu.Lock()
 	defer gfs.Mu.Unlock()
 
-    
 	reply.GoFishGame = false
 	reply.Turn = 1
 
@@ -120,12 +138,15 @@ func (gfs *GoFishServer) LoadCard() error {
 	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "clubs"})
 	}
+
 	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "diamonds"})
 	}
+
 	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "hearts"})
 	}
+
 	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "spades"})
 	}
@@ -133,11 +154,6 @@ func (gfs *GoFishServer) LoadCard() error {
 	//shuffle gfs.Deck
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(gfs.Deck), func(i, j int) {gfs.Deck[i], gfs.Deck[j] = gfs.Deck[j], gfs.Deck[i] })
-
-    for _, value := range gfs.Deck {
-        fmt.Println(value)
-    }
-
     return nil
 }
 
@@ -188,6 +204,7 @@ func StartServer () *GoFishServer {
     for gfs.dead == false {
 
     }
+
 	return rep
 }
 
