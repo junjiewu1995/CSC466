@@ -45,7 +45,7 @@ func (p *Player) CallCardRequest() {
 
 	// Ask for a Card Components
 	if !call("GoFishServer.RequestForCard", args, &reply) {
-	    fmt.Println("Hello World :)")
+	    fmt.Println("Fail to request for Cards")
 	    return
 	}
 
@@ -68,6 +68,5 @@ func main () {
 	gsc := Player{}
 	gsc.goFishP()
 	gsc.EnterGame()
-	gsc.CallCardRequest()
 }
 

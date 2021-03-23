@@ -34,7 +34,6 @@ type Pairs struct {
 	Two Card
 }
 
-
 type CardRequestReply struct {
 	Turn 			int
 	GoFishGame		bool
@@ -44,7 +43,7 @@ type CardRequestReply struct {
 type CardRequest struct {
 	GoFishGame 		bool
 	ID              int
-	Player          Player
+	P               Player
 }
 
 // Cook up a unique-ish UNIX-domain socket name

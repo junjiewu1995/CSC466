@@ -10,34 +10,92 @@ import (
 	"sync"
 	"math/rand"
 	"time"
+	"encoding/json"
+	"strconv"
 )
 
 import . "../CallingUtilities"
 
 
+type GameConfig struct {
+    Gameset struct {
+        HostPlayers     string `json:"hostplayers"`
+    } `json:"gameset`
+}
+
+
+type Player struct {
+	ID 			int
+	Hand 		[]Card
+	Pairs 		[]Pairs
+	Opponents 	[]Player
+}
+
 type GoFishServer struct {
-	Deck			[]Card
+
 	Mu 				sync.Mutex
 	PlayerCounter 	int
 	dead            bool
 	Players         []Player
+	Deck			[]Card
+	turnIndex       int
+	TotalPlayers    int
 }
 
-func (gfs *GoFishServer) EnterGame (ask *CardRequest, reply *CardRequestReply) error {
+
+func (gfs *GoFishServer)LoadConfiguration (file string) (GameConfig, error) {
+    var config GameConfig
+    configFile, err := os.Open(file)
+    /* defer to the end and close the config file*/
+    defer configFile.Close()
+    if err != nil {
+        return config, err
+    }
+    jsonParser := json.NewDecoder(configFile)
+    err = jsonParser.Decode(&config)
+    return config, err
+}
+
+func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestReply) error {
 
     /* Lock for each players */
     gfs.Mu.Lock()
     defer gfs.Mu.Unlock()
+
+    var p Player
+    p.ID = gfs.PlayerCounter
 
     /* No More than 7 players */
     if gfs.PlayerCounter < 7 {
 
         /* Add up the Player number */
         reply.ID = gfs.PlayerCounter
+
+        /* Appends the players */
+        gfs.Players = append(gfs.Players, p)
+
+        /* add up the player counter */
         gfs.PlayerCounter += 1
     }
 
+    /* Once the Player meet the decides number Game starts */
+
+    if gfs.PlayerCounter == gfs.TotalPlayers {
+        fmt.Println("Game Starts ... ")
+        gfs.gameStart()
+    }
+
     return nil
+}
+
+func (gfs *GoFishServer) gameStart () {
+    gfs.LoadCard()
+
+}
+
+func (gfs *GoFishServer) GetStatusOfGame () {
+
+
 }
 
 func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestReply) error {
@@ -45,7 +103,7 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 	gfs.Mu.Lock()
 	defer gfs.Mu.Unlock()
 
-    fmt.Println("Calling from RequestForCard ...")
+    
 	reply.GoFishGame = false
 	reply.Turn = 1
 
@@ -53,10 +111,8 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 }
 
 //Fills gfs.Deck with 52 shuffled Cards
-func (gfs *GoFishServer) LoadCard() {
-	//ensure Deck is empty to start
-	gfs.Deck := []Card{}
-	
+func (gfs *GoFishServer) LoadCard() error {
+
 	//values a card can be
 	cardValues := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}
 
@@ -76,12 +132,15 @@ func (gfs *GoFishServer) LoadCard() {
 
 	//shuffle gfs.Deck
 	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(gfs.Deck), func(i, j int) { gfs.Deck[i], gfs.Deck[j] = gfs.Deck[j], gfs.Deck[i] })
+	rand.Shuffle(len(gfs.Deck), func(i, j int) {gfs.Deck[i], gfs.Deck[j] = gfs.Deck[j], gfs.Deck[i] })
+
+    for _, value := range gfs.Deck {
+        fmt.Println(value)
+    }
+
+    return nil
 }
 
-func (gfs *GoFishServer) printLine() {
-	fmt.Println("Hello, World :)")
-}
 
 /**
  * RPC server interaction
@@ -111,19 +170,24 @@ func StartServer () *GoFishServer {
 
     /* Construct the Server Struct */
 	gfs := GoFishServer{}
+	gfs.Deck = []Card{}
 
+    gfs.TotalPlayers = 0
 	gfs.PlayerCounter = 0
+
+	config, _ := gfs.LoadConfiguration("../game.config.json")
+
+	i1, err := strconv.Atoi(config.Gameset.HostPlayers)
+    if err == nil { gfs.TotalPlayers = i1 }
 
 	/* Calling server method */
 	gfs.server()
-
     rep := gfs.serverStateSet()
 
     /* Checking the game is over or not */
     for gfs.dead == false {
 
     }
-
 	return rep
 }
 
