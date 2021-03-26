@@ -157,6 +157,15 @@ func (gfs *GoFishServer) LoadCard() error {
     return nil
 }
 
+//Draw a card from the deck (returns card type)
+func (gfs *GoFishServer) goFish() {
+    
+    //draw a card from the deck, removing it from gfs.Deck
+    drawnCard = gfs.Deck[0]
+    gfs.Deck = gfs.Deck[1:]
+    
+    return drawnCard
+}
 
 /**
  * RPC server interaction
