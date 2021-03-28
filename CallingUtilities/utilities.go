@@ -48,6 +48,7 @@ type CardRequest struct {
 
 type gameStatusreply struct {
     goFish          bool
+    Game            bool
 }
 
 type GameStatusRequest struct {

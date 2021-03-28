@@ -13,19 +13,18 @@ import . "../CallingUtilities"
 */
 
 type Player struct {
-	ID 			int
-	Hand 		[]Card
-	Pairs 		[]Pairs
-	rivals	    []Player
+	ID 			int      // Player ID
+	Hand 		[]Card   // Current Card in Hand
+	Pairs 		[]Pairs  // Pairs for wins
+	rivals	    []Player // Other Players
+	Win         bool     // Check for Game Over
 }
 
 type GoFishGameReply struct {
 	Turn 		int
 }
 
-func (p *Player ) gameOver () {
-
-}
+func (p *Player ) gameOver () bool { return p.Win }
 
 //
 // send an RPC request to the master, wait for the response.
@@ -109,7 +108,14 @@ func main () {
 
 	    /* Checking the Game Status */
 	    gameStatusreply = gsc.GameStatus()
-	    if gameStatusreply.Turn == gsc.ID { gsc.CardRequest(gameStatusreply.goFish) }
+
+	    if gameStatusreply.Game {
+	        p.Win = true
+	    }
+
+	    if gameStatusreply.Turn == gsc.ID {
+	        gsc.CardRequest(gameStatusreply.goFish)
+	    }
 
 	    /* Check the Game Status for 2 secs */
         time.Sleep( 2 * time.Second)

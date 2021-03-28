@@ -184,8 +184,12 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 	gfs.Mu.Lock()
 	defer gfs.Mu.Unlock()
 
+    if ask.goFish {
+        reply.GoFishGame = true
+        return nil
+    }
 
-	reply.GoFishGame = false
+	reply.GoFishGame = true
 	reply.Turn = 1
 
 	return nil
