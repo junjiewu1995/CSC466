@@ -234,6 +234,15 @@ func (gfs *GoFishServer) server() {
 
 func (gfs *GoFishServer)serverStateSet() *GoFishServer {
 
+    /* Construct the Server Struct */
+    gfs := GoFishServer{}
+    gfs.Deck = []Card{}
+
+    /* Intialize the Game Variables */
+    gfs.TotalPlayers = 0
+    gfs.PlayerCounter = 0
+    gfs.PlayerTurnIndex = 0
+
 	return gfs
 }
 
@@ -245,15 +254,7 @@ func (gfs *GoFishServer)gameOver() bool {
 /* Create a Game Server */
 func StartServer () *GoFishServer {
 
-    /* Construct the Server Struct */
-	gfs := GoFishServer{}
-	gfs.Deck = []Card{}
 
-    /* Intialize the Game Variables */
-
-    gfs.TotalPlayers = 0
-	gfs.PlayerCounter = 0
-	gfs.PlayerTurnIndex = 0
 
     /* Construct the Game Config file */
 	config, _ := gfs.LoadConfiguration("../game.config.json")
