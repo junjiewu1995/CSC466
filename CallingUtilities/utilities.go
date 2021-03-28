@@ -21,9 +21,9 @@ type Reply struct {
 	PlayerNum int
 }
 
+/* Value Range: 2,3,4,5,6,7,8,9,10,J,Q,K,A */
+/* Suit Range: clubs,diamonds,hearts,spades */
 type Card struct {
-	/* Value Range: 2,3,4,5,6,7,8,9,10,J,Q,K,A */
-	/* Suit Range: clubs,diamonds,hearts,spades */
 	Value string
 	Suit string
 	Used bool
@@ -44,6 +44,14 @@ type CardRequest struct {
 	GoFishGame 		bool
 	ID              int
 	P               Player
+}
+
+type gameStatusreply struct {
+    goFish          bool
+}
+
+type GameStatusRequest struct {
+    goFish          bool
 }
 
 // Cook up a unique-ish UNIX-domain socket name

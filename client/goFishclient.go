@@ -5,17 +5,26 @@ import (
 	"log"
 	"net/rpc"
 )
+
 import . "../CallingUtilities"
+
+/**
+ * Cient maintains its own Hands
+*/
 
 type Player struct {
 	ID 			int
 	Hand 		[]Card
 	Pairs 		[]Pairs
-	Opponents 	[]Player
+	rivals	    []Player
 }
 
 type GoFishGameReply struct {
 	Turn 		int
+}
+
+func (p *Player ) gameOver () {
+
 }
 
 //
@@ -35,20 +44,48 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	return false
 }
 
-func (p *Player)goFishP() {
-	fmt.Println("GoFishPlayer")
-}
 
-func (p *Player) CallCardRequest() {
+/**
+ * Calling for Card Request
+*/
+
+func (p *Player) CallCardRequest(goFish bool) {
 	args := CardRequest{}
 	reply := CardRequestReply{}
+
+    if goFish {
+        args.goFish = true
+    }
 
 	// Ask for a Card Components
 	if !call("GoFishServer.RequestForCard", args, &reply) {
 	    fmt.Println("Fail to request for Cards")
 	    return
 	}
+	return reply
 }
+
+
+/**
+ * Calling for Game Status
+*/
+
+func (p *Player) GameStatus () GameStatusReply {
+
+    args := GameStatusRequest{}
+    gameStatusreply := GameStatusReply{}
+
+    // Ask for a Card Components
+    if !call("GoFishServer.GetStatusOfGame", args, &gameStatusreply) {
+        fmt.Println("Fail to receive the Game status")
+        return
+    }
+    return gameStatusreply
+}
+
+/**
+ * Enter the Game
+*/
 
 func (p *Player) EnterGame () {
     args := CardRequest{}
@@ -59,13 +96,22 @@ func (p *Player) EnterGame () {
         fmt.Println("Fail to Enter the Game")
         return
     }
-
     fmt.Println(reply.ID)
 }
 
+
 func main () {
 	gsc := Player{}
-	gsc.goFishP()
 	gsc.EnterGame()
-}
 
+	for !gsc.gameOver() {
+	    gameStatusreply := GameStatusReply{}
+
+	    /* Checking the Game Status */
+	    gameStatusreply = gsc.GameStatus()
+	    if gameStatusreply.Turn == gsc.ID { gsc.CardRequest(gameStatusreply.goFish) }
+
+	    /* Check the Game Status for 2 secs */
+        time.Sleep( 2 * time.Second)
+	}
+}

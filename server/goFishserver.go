@@ -40,6 +40,7 @@ type GoFishServer struct {
 	Deck			      []Card
 	PlayerTurnIndex       int
 	TotalPlayers          int
+
 }
 
 
@@ -61,7 +62,7 @@ func (gfs *GoFishServer)LoadConfiguration (file string) (GameConfig, error) {
 
 
 /**
- *  Player Set Up
+ *  Players Set Up
 */
 
 func (gfs *GoFishServer) PlayersSetUp (cardNum int) {
@@ -79,6 +80,9 @@ func (gfs *GoFishServer) PlayersSetUp (cardNum int) {
 }
 
 
+/*
+ * Player Draw Cards
+*/
 
 func (gfs *GoFishServer) drawCards(i int) error {
 
@@ -93,7 +97,9 @@ func (gfs *GoFishServer) drawCards(i int) error {
 }
 
 
-
+/**
+ * Players Enter Game
+*/
 func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestReply) error {
 
     /* Lock for each players */
@@ -111,7 +117,6 @@ func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestRe
         /* add up the player counter */
         gfs.PlayerCounter += 1
     }
-
     /* Once the Player meets the decides number Game starts */
     if gfs.PlayerCounter == gfs.TotalPlayers { gfs.gameStart() }
     return nil
@@ -139,14 +144,15 @@ func (gfs *GoFishServer) assignCard () error {
 
     /* Check the Player Number */
     switch {
+
         case gfs.PlayerCounter == 1:
             gfs.dead = true
+
         case gfs.PlayerCounter == 2:
-            /* 2 players assign 7 cards */
-            gfs.PlayersSetUp(7)
+            gfs.PlayersSetUp(7) // 2 players assign 7 cards
+
         default:
-            /* More than 2 players assign 5 cards */
-            gfs.PlayersSetUp(5)
+            gfs.PlayersSetUp(5) // More than 2 players assign 5 cards
     }
     return nil
 }
@@ -163,7 +169,6 @@ func (gfs *GoFishServer) GetStatusOfGame () {
 /**
  * If the player does not have the cards, it would return One Card for the Player
  */
-
 func (gfs *GoFishServer) GoFish () {
 
 }
@@ -189,7 +194,6 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 //Fills gfs.Deck with 52 shuffled Cards
 func (gfs *GoFishServer) LoadCard() error {
 
-	//values a card can be
 	cardValues := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}
 
 	//Create 52 new cards, not shuffled, in gfs.Deck
@@ -246,6 +250,10 @@ func (gfs *GoFishServer)serverStateSet() *GoFishServer {
 	return gfs
 }
 
+/**
+ * gameOver
+ */
+
 func (gfs *GoFishServer)gameOver() bool {
 
     return gfs.dead
@@ -253,8 +261,6 @@ func (gfs *GoFishServer)gameOver() bool {
 
 /* Create a Game Server */
 func StartServer () *GoFishServer {
-
-
 
     /* Construct the Game Config file */
 	config, _ := gfs.LoadConfiguration("../game.config.json")
