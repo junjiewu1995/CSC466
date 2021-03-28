@@ -17,6 +17,10 @@ import (
 import . "../CallingUtilities"
 
 
+/**
+ * Server should know everthing about clients
+*/
+
 type GameConfig struct {
     Gameset struct {
         HostPlayers     string `json:"hostplayers"`
@@ -181,15 +185,26 @@ func (gfs *GoFishServer) GoFish () {
 */
 func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestReply) error {
 
+    // Check for Other Player's cards
 	gfs.Mu.Lock()
 	defer gfs.Mu.Unlock()
 
     if ask.goFish {
         reply.GoFishGame = true
+        reply.PlayerTurnIndex = gfs.PlayerTurnIndex
         return nil
     }
 
 	reply.GoFishGame = true
+
+	if gfs.PlayerTurnIndex == TotalPlayers - 1 {
+	    gfs.PlayerTurnIndex = 0
+	} else {
+	    gfs.PlayerTurnIndex += 1
+	}
+
+	reply.PlayerTurnIndex = gfs.PlayerTurnIndex
+
 	reply.Turn = 1
 
 	return nil
@@ -255,11 +270,15 @@ func (gfs *GoFishServer)serverStateSet() *GoFishServer {
 }
 
 /**
- * gameOver
+ * GameOver
  */
 
 func (gfs *GoFishServer)gameOver() bool {
 
+    for k, v range gfs.Players {
+        // If the current Players Hand reach full
+        if len(v.Pairs) == 13: gfs.dead = true
+    }
     return gfs.dead
 }
 

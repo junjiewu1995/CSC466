@@ -45,6 +45,16 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 
 
 /**
+ * Players Hands Updates
+*/
+func (p *Player) HandsUpdates (C Card, Cards []Card) error {
+
+
+
+    return nil
+}
+
+/**
  * Calling for Card Request
 */
 
@@ -55,6 +65,10 @@ func (p *Player) CallCardRequest(goFish bool) {
     if goFish {
         args.goFish = true
     }
+
+    // Ask for a random Card from a random Players
+
+    p.HandsUpdates()
 
 	// Ask for a Card Components
 	if !call("GoFishServer.RequestForCard", args, &reply) {
