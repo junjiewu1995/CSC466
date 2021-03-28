@@ -163,12 +163,8 @@ func (gfs *GoFishServer) GetStatusOfGame () {
 /**
  * If the player does not have the cards, it would return One Card for the Player
  */
-<<<<<<< HEAD
-func (gfs *GoFishServer) goFish () {
-=======
-func (gfs *GoFishServer) GoFish () {
->>>>>>> 0fc2f96 (m)
 
+func (gfs *GoFishServer) GoFish () {
 
 }
 
@@ -242,8 +238,8 @@ func (gfs *GoFishServer)serverStateSet() *GoFishServer {
 }
 
 func (gfs *GoFishServer)gameOver() bool {
-    if gfs.dead == false { return false}
-    else {  return true }
+
+    return gfs.dead
 }
 
 /* Create a Game Server */
