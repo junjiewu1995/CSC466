@@ -48,7 +48,6 @@ func (p *Player) CallCardRequest() {
 	    fmt.Println("Fail to request for Cards")
 	    return
 	}
-
 }
 
 func (p *Player) EnterGame () {

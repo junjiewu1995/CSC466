@@ -67,6 +67,7 @@ func NewGoFishGame(computer ...bool) *GoFishGame {
     for i, card := range rnd.Perm(52) {
         deck[i] = Card(card % 13)
     }
+
     players := make([]*Player, len(computer), len(computer))
     for i, computer := range computer {
         players[i] = newPlayer(computer)
@@ -154,7 +155,9 @@ func (gm *GoFishGame) drawCard(quiet bool) {
 
 func (gm *GoFishGame) nextPlayer(quiet bool) {
     gm.turnIndex = (gm.turnIndex + 1) % len(gm.players)
+
     gm.turn = gm.players[gm.turnIndex]
+
     if !quiet {
         fmt.Printf("%s to play.\n", gm.playerName(gm.turnIndex))
     }
@@ -170,14 +173,17 @@ func (gm *GoFishGame) setup() {
 }
 
 func (gm *GoFishGame) gameOver() bool {
+
     if len(gm.deck) != 0 {
         return false
     }
+
     for _, player := range gm.players {
         if player.NumberOfCards() > 0 {
             return false
         }
     }
+
     return true
 }
 
@@ -228,6 +234,7 @@ again:
     if stolen != 0 {
         fmt.Printf("%s stole %d cards of rank %s from %s.\n",
             gm.playerName(gm.turnIndex), stolen, rank, gm.playerName(opponentIndex))
+
         for i := 0; i < stolen; i++ {
             player.TakeCard(rank)
         }

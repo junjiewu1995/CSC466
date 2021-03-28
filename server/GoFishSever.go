@@ -163,7 +163,11 @@ func (gfs *GoFishServer) GetStatusOfGame () {
 /**
  * If the player does not have the cards, it would return One Card for the Player
  */
+<<<<<<< HEAD
 func (gfs *GoFishServer) goFish () {
+=======
+func (gfs *GoFishServer) GoFish () {
+>>>>>>> 0fc2f96 (m)
 
 
 }
