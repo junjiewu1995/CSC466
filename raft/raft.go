@@ -20,7 +20,11 @@ package raft
 import "sync"
 import "sync/atomic"
 import "../labrpc"
-
+import "time"
+import "math/rand"
+import "log"
+import "testing"
+import "github.com/golang-collections/lib.go/assert"
 // import "bytes"
 // import "../labgob"
 
@@ -42,6 +46,28 @@ type ApplyMsg struct {
 	CommandIndex int
 }
 
+type state int
+
+// 规定了 server 所需的 3 种状态
+const (
+	LEADER state = iota
+	CANDIDATE
+	FOLLOWER
+)
+
+func (s state) String() string {
+	switch s {
+	case LEADER:
+		return "Leader"
+	case CANDIDATE:
+		return "Candidate"
+	case FOLLOWER:
+		return "Follower"
+	default:
+		panic("出现了第4种 server state")
+	}
+}
+
 //
 // A Go object implementing a single Raft peer.
 //
@@ -57,7 +83,7 @@ type Raft struct {
 	// state a Raft server must maintain.
     currentTerm     int
     votedFor        int
-    logs            []logEntry
+    // logs            []logEntry
 
     // Volatile state on all servers: initialized to 0, increase monotonically
     commitIndex int // index of highest log entry known to be committed
@@ -84,6 +110,45 @@ type Raft struct {
 
 }
 
+func Test_state_String(t *testing.T) {
+	tests := []struct {
+		name string
+		s    state
+		want string
+	}{
+
+		{
+			"Follower",
+			FOLLOWER,
+			"Follower",
+		},
+
+		{
+			"Candidate",
+			CANDIDATE,
+			"Candidate",
+		},
+
+		{
+			"Leader",
+			LEADER,
+			"Leader",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.s.String(); got != tt.want {
+				t.Errorf("state.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+
+func (rf *Raft) isLeader() bool {
+	return rf.state == LEADER
+}
+
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
@@ -91,7 +156,8 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
-
+    term = rf.currentTerm
+    isleader = rf.isLeader()
 
 	return term, isleader
 }
@@ -134,8 +200,6 @@ func (rf *Raft) readPersist(data []byte) {
 	//   rf.yyy = yyy
 	// }
 }
-
-
 
 
 //
@@ -267,4 +331,45 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 
 	return rf
+}
+
+
+const (
+	// heartBeat 发送心跳的时间间隔，ms
+	heartBeat = 50 * time.Millisecond
+	// minElection 选举过期的最小时间间隔，ms
+	minElection = heartBeat * 10
+	// minElectionInterval 选举过期的最大时间间隔，ms
+	maxElection = minElection * 8 / 5
+
+	// 按照论文 5.6 Timing and availability 的要求
+	// heartBeat 和 minElection 需要相差了一个数量级
+)
+
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	DPrintf("程序开始运行")
+}
+
+
+func electionTimeout() time.Duration {
+	interval := int(minElection) +
+		rand.Intn(int(maxElection-minElection))
+	return time.Duration(interval)
+}
+
+func Test_ElectionTimeout(t *testing.T) {
+	ast := assert.New(t)
+	for i := 0; i < 1000; i++ {
+		rate := electionTimeout() / heartBeat
+		ast.True(rate >= 10, "electionTimeout 没有比 heartBeatInterval 大 10 倍")
+	}
+}
+
+func Test_heartBeat_isInRange(t *testing.T) {
+	ast := assert.New(t)
+	minInterval := 30 * time.Millisecond
+	maxInterval := 100 * time.Millisecond
+	isInRange := minInterval <= heartBeat && heartBeat <= maxInterval
+	ast.True(isInRange, " heartBeat 设置的过大或过小")
 }
