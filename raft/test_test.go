@@ -20,7 +20,10 @@ import "sync"
 const RaftElectionTimeout = 1000 * time.Millisecond
 
 func TestInitialElection2A(t *testing.T) {
-	servers := 3
+
+    fmt.Println("TestInitialElection2A Start ...")
+
+    servers := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
 

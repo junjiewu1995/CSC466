@@ -206,7 +206,6 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 	reply.PlayerTurnIndex = gfs.PlayerTurnIndex
 
 	reply.Turn = 1
-
 	return nil
 }
 

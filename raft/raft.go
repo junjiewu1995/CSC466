@@ -25,7 +25,6 @@ import "../labrpc"
 // import "../labgob"
 
 
-
 //
 // as each Raft peer becomes aware that successive log entries are
 // committed, the peer should send an ApplyMsg to the service (or
@@ -57,6 +56,7 @@ type Raft struct {
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
 
+
 }
 
 // return currentTerm and whether this server
@@ -66,6 +66,8 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
+
+
 	return term, isleader
 }
 

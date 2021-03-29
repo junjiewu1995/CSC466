@@ -58,12 +58,14 @@ type config struct {
 var ncpu_once sync.Once
 
 func make_config(t *testing.T, n int, unreliable bool) *config {
+
 	ncpu_once.Do(func() {
 		if runtime.NumCPU() < 2 {
 			fmt.Printf("warning: only one CPU, which may conceal locking bugs\n")
 		}
 		rand.Seed(makeSeed())
 	})
+
 	runtime.GOMAXPROCS(4)
 	cfg := &config{}
 	cfg.t = t
@@ -75,10 +77,10 @@ func make_config(t *testing.T, n int, unreliable bool) *config {
 	cfg.saved = make([]*Persister, cfg.n)
 	cfg.endnames = make([][]string, cfg.n)
 	cfg.logs = make([]map[int]interface{}, cfg.n)
-	cfg.start = time.Now()
+
+    cfg.start = time.Now()
 
 	cfg.setunreliable(unreliable)
-
 	cfg.net.LongDelays(true)
 
 	// create a full set of Rafts.
@@ -88,9 +90,7 @@ func make_config(t *testing.T, n int, unreliable bool) *config {
 	}
 
 	// connect everyone
-	for i := 0; i < cfg.n; i++ {
-		cfg.connect(i)
-	}
+	for i := 0; i < cfg.n; i++ { cfg.connect(i) }
 
 	return cfg
 }
@@ -139,12 +139,14 @@ func (cfg *config) start1(i int) {
 	// a fresh set of outgoing ClientEnd names.
 	// so that old crashed instance's ClientEnds can't send.
 	cfg.endnames[i] = make([]string, cfg.n)
-	for j := 0; j < cfg.n; j++ {
+
+    for j := 0; j < cfg.n; j++ {
 		cfg.endnames[i][j] = randstring(20)
 	}
 
 	// a fresh set of ClientEnds.
 	ends := make([]*labrpc.ClientEnd, cfg.n)
+
 	for j := 0; j < cfg.n; j++ {
 		ends[j] = cfg.net.MakeEnd(cfg.endnames[i][j])
 		cfg.net.Connect(cfg.endnames[i][j], j)
@@ -202,7 +204,7 @@ func (cfg *config) start1(i int) {
 		}
 	}()
 
-	rf := Make(ends, i, cfg.saved[i], applyCh)
+	rf := Make(ends, i, cfg.saved[i], applyCh) // create the server
 
 	cfg.mu.Lock()
 	cfg.rafts[i] = rf
@@ -233,7 +235,7 @@ func (cfg *config) cleanup() {
 
 // attach server i to the net.
 func (cfg *config) connect(i int) {
-	// fmt.Printf("connect(%d)\n", i)
+	fmt.Printf("connect(%d)\n", i)
 
 	cfg.connected[i] = true
 
@@ -297,36 +299,37 @@ func (cfg *config) setlongreordering(longrel bool) {
 	cfg.net.LongReordering(longrel)
 }
 
-// check that there's exactly one leader.
-// try a few times in case re-elections are needed.
+// 检查是否确实仅存在一个领导人
+// 为了测试重新选举，所以会多尝试几次查找
 func (cfg *config) checkOneLeader() int {
-	for iters := 0; iters < 10; iters++ {
-		ms := 450 + (rand.Int63() % 100)
-		time.Sleep(time.Duration(ms) * time.Millisecond)
 
-		leaders := make(map[int][]int)
-		for i := 0; i < cfg.n; i++ {
+    // 多迭代几次尝试寻找领导人
+    for iters := 0; iters < 10; iters++ {
+		ms := 450 + (rand.Int63() % 100)
+        time.Sleep(time.Duration(ms) * time.Millisecond)
+
+        leaders := make(map[int][]int)
+        for i := 0; i < cfg.n; i++ {
 			if cfg.connected[i] {
-				if term, leader := cfg.rafts[i].GetState(); leader {
+				if term, leader := cfg.rafts[i].GetState(); leader { // 赋值，条件判断
 					leaders[term] = append(leaders[term], i)
-				}
+                }
 			}
 		}
 
+        // 校验没有在一个周期内选出两个领导人，找到最后新的Term
 		lastTermWithLeader := -1
 		for term, leaders := range leaders {
 			if len(leaders) > 1 {
 				cfg.t.Fatalf("term %d has %d (>1) leaders", term, len(leaders))
 			}
-			if term > lastTermWithLeader {
-				lastTermWithLeader = term
-			}
+			if term > lastTermWithLeader { lastTermWithLeader = term }
 		}
 
-		if len(leaders) != 0 {
-			return leaders[lastTermWithLeader][0]
-		}
+        // 找到最新的领导人
+		if len(leaders) != 0 { return leaders[lastTermWithLeader][0] }
 	}
+
 	cfg.t.Fatalf("expected one leader, got none")
 	return -1
 }
