@@ -55,7 +55,32 @@ type Raft struct {
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
+    currentTerm     int
+    votedFor        int
+    logs            []logEntry
 
+    // Volatile state on all servers: initialized to 0, increase monotonically
+    commitIndex int // index of highest log entry known to be committed
+    lastApplied int // index of highest log entry known to be applied to state machine
+
+    // Volatile state on leader:
+    // nextIndex : for each server, index of the next log entry to send to that server
+    // initialized to leader last LogIndex+1
+    nextIndex []int
+    // matchIndex : for each server, index of highest log entry known to be replicated on server
+    // initialized to 0, increases monotonically
+    matchIndex []int
+
+    /* ↑ state of raft on Figure 2 ↑ */
+    state     state
+    voteCount int
+
+    chanApply chan ApplyMsg
+
+    //channel
+    chanCommit    chan struct{}
+    chanHeartBeat chan struct{}
+    chanBeElected chan struct{}
 
 }
 
