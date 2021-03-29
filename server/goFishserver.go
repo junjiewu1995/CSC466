@@ -174,7 +174,12 @@ func (gfs *GoFishServer) GetStatusOfGame () {
  * If the player does not have the cards, it would return One Card for the Player
  */
 func (gfs *GoFishServer) GoFish () {
-
+    
+    //draw a card from the deck, removing it from gfs.Deck
+    drawnCard = gfs.Deck[0]
+    gfs.Deck = gfs.Deck[1:]
+    
+    return drawnCard
 }
 
 
