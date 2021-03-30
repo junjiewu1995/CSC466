@@ -86,6 +86,7 @@ func make_config(t *testing.T, n int, unreliable bool) *config {
 	// create a full set of Rafts.
 	for i := 0; i < cfg.n; i++ {
 		cfg.logs[i] = map[int]interface{}{}
+		/* create the followers */
 		cfg.start1(i)
 	}
 
@@ -303,7 +304,7 @@ func (cfg *config) setlongreordering(longrel bool) {
 // 为了测试重新选举，所以会多尝试几次查找
 func (cfg *config) checkOneLeader() int {
 
-    // 多迭代几次尝试寻找领导人
+    // Find the Leader by iterations
     for iters := 0; iters < 10; iters++ {
 		ms := 450 + (rand.Int63() % 100)
         time.Sleep(time.Duration(ms) * time.Millisecond)
@@ -326,7 +327,7 @@ func (cfg *config) checkOneLeader() int {
 			if term > lastTermWithLeader { lastTermWithLeader = term }
 		}
 
-        // 找到最新的领导人
+        // Find out the newest leader
 		if len(leaders) != 0 { return leaders[lastTermWithLeader][0] }
 	}
 

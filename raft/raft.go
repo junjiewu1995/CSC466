@@ -20,11 +20,7 @@ package raft
 import "sync"
 import "sync/atomic"
 import "../labrpc"
-import "time"
-import "math/rand"
-import "log"
-import "testing"
-import "github.com/golang-collections/lib.go/assert"
+import "fmt"
 // import "bytes"
 // import "../labgob"
 
@@ -46,27 +42,18 @@ type ApplyMsg struct {
 	CommandIndex int
 }
 
+/**
+ * Leader : Handles all client requests
+ * Followers: are passive, and only respond to requests from leaders
+ * Candidate: a state used to elect a new leader
+*/
+
 type state int
+const  None state = -1
+const  Leader state = 0
+const  CANDIDATE state = 1
+const  FOLLOWER state = 2
 
-// 规定了 server 所需的 3 种状态
-const (
-	LEADER state = iota
-	CANDIDATE
-	FOLLOWER
-)
-
-func (s state) String() string {
-	switch s {
-	case LEADER:
-		return "Leader"
-	case CANDIDATE:
-		return "Candidate"
-	case FOLLOWER:
-		return "Follower"
-	default:
-		panic("出现了第4种 server state")
-	}
-}
 
 //
 // A Go object implementing a single Raft peer.
@@ -83,7 +70,7 @@ type Raft struct {
 	// state a Raft server must maintain.
     currentTerm     int
     votedFor        int
-    // logs            []logEntry
+    //logs            []logEntry
 
     // Volatile state on all servers: initialized to 0, increase monotonically
     commitIndex int // index of highest log entry known to be committed
@@ -102,52 +89,13 @@ type Raft struct {
     voteCount int
 
     chanApply chan ApplyMsg
-
-    //channel
-    chanCommit    chan struct{}
-    chanHeartBeat chan struct{}
-    chanBeElected chan struct{}
-
 }
 
-func Test_state_String(t *testing.T) {
-	tests := []struct {
-		name string
-		s    state
-		want string
-	}{
+/**
+  * if the current server is the leader
+*/
+func (rf *Raft) isLeader() bool {  return rf.state == Leader }
 
-		{
-			"Follower",
-			FOLLOWER,
-			"Follower",
-		},
-
-		{
-			"Candidate",
-			CANDIDATE,
-			"Candidate",
-		},
-
-		{
-			"Leader",
-			LEADER,
-			"Leader",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.s.String(); got != tt.want {
-				t.Errorf("state.String() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-
-func (rf *Raft) isLeader() bool {
-	return rf.state == LEADER
-}
 
 // return currentTerm and whether this server
 // believes it is the leader.
@@ -158,9 +106,11 @@ func (rf *Raft) GetState() (int, bool) {
 	// Your code here (2A).
     term = rf.currentTerm
     isleader = rf.isLeader()
-
 	return term, isleader
 }
+
+
+
 
 //
 // save Raft's persistent state to stable storage,
@@ -208,6 +158,10 @@ func (rf *Raft) readPersist(data []byte) {
 //
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
+    Term         int
+    CandidateId  int
+    LastLogIndex int
+    LastLogTerm  int
 }
 
 //
@@ -216,6 +170,8 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (2A).
+    Term         int
+    VoteGranted  bool
 }
 
 //
@@ -223,6 +179,7 @@ type RequestVoteReply struct {
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
+
 }
 
 //
@@ -306,6 +263,16 @@ func (rf *Raft) killed() bool {
 	return z == 1
 }
 
+func (rf *Raft) statesRunLoop() {
+
+    /* Decides the cadidates */
+    for {
+        switch rf.state {
+            
+        }
+    }
+}
+
 //
 // the service or tester wants to create a Raft server. the ports
 // of all the Raft servers (including this one) are in peers[]. this
@@ -319,6 +286,9 @@ func (rf *Raft) killed() bool {
 //
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
+
+    fmt.Println("Raft Initialization ...")
+
 	rf := &Raft{}
 	rf.peers = peers
 	rf.persister = persister
@@ -326,50 +296,29 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	// Your initialization code here (2A, 2B, 2C).
 
+	/* All the server are initialized as a Follower State */
+    rf.state = FOLLOWER
+
+	/* assign current server's apply channel to the given channel */
+	rf.chanApply = applyCh
+
+	/* current commited term initialization 0*/
+	rf.currentTerm = 0
+
+	/* voteFor nobaody */
+	rf.votedFor = -1
+
+	/* None commited Index */
+	rf.commitIndex = 0
+
+	/* None Last Appied Msg*/
+	rf.lastApplied = 0
+
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
 
+    // The Followers select the leader by a random TimeOut
+    go rf.statesRunLoop()
 
 	return rf
-}
-
-
-const (
-	// heartBeat 发送心跳的时间间隔，ms
-	heartBeat = 50 * time.Millisecond
-	// minElection 选举过期的最小时间间隔，ms
-	minElection = heartBeat * 10
-	// minElectionInterval 选举过期的最大时间间隔，ms
-	maxElection = minElection * 8 / 5
-
-	// 按照论文 5.6 Timing and availability 的要求
-	// heartBeat 和 minElection 需要相差了一个数量级
-)
-
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	DPrintf("程序开始运行")
-}
-
-
-func electionTimeout() time.Duration {
-	interval := int(minElection) +
-		rand.Intn(int(maxElection-minElection))
-	return time.Duration(interval)
-}
-
-func Test_ElectionTimeout(t *testing.T) {
-	ast := assert.New(t)
-	for i := 0; i < 1000; i++ {
-		rate := electionTimeout() / heartBeat
-		ast.True(rate >= 10, "electionTimeout 没有比 heartBeatInterval 大 10 倍")
-	}
-}
-
-func Test_heartBeat_isInRange(t *testing.T) {
-	ast := assert.New(t)
-	minInterval := 30 * time.Millisecond
-	maxInterval := 100 * time.Millisecond
-	isInRange := minInterval <= heartBeat && heartBeat <= maxInterval
-	ast.True(isInRange, " heartBeat 设置的过大或过小")
 }
