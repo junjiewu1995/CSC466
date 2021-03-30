@@ -267,9 +267,36 @@ func (rf *Raft) killed() bool {
 }
 
 
-func (rf *Raft) NewElection () {
+
+/*
+ * Sent out the Broadcast messages to the Follower servers
+*/
+func (rf *Raft) sendRequestVoteAndProcessReply(i int, args RequestVoteArgs) {
+
+    
+
+}
+
+
+func (rf *Raft) broadcastRequestVote() {
+    var args RequestVoteArgs
 
     rf.mu.Lock()
+    args.Term = rf.currentTerm
+    args.CandidateId = rf.me
+    rf.mu.Unlock()
+
+    for i := range rf.peers {
+        if i != rf.me && rf.isCandidate() {
+            go rf.sendRequestVoteAndProcessReply(i, args)
+        }
+    }
+}
+
+
+func (rf *Raft) NewElection () {
+
+    rf.mu.Lock() // lock non-important in the raft case ? might be useful for client server interaction
     rf.currentTerm += 1
     /* The Candidate Vote for itself */
     rf.votedFor = rf.me
@@ -315,7 +342,10 @@ func (rf *Raft) statesRunLoop() {
                         fmt.Println("HearBeat ...")
                 }
             case CANDIDATE:
-
+                /*
+                 * Once the Follower becomes the Cadidates, It begins to becomes the leader
+                */
+                rf.NewElection()
             /* 2nd step select the leader */
             case LEADER:
 

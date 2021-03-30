@@ -21,3 +21,10 @@ func electionTimeout() time.Duration {
     return time.Duration(int(MinElection) + rand.Intn(int(MaxElection - MinElection)))
 }
 
+/*
+ * Check the current the Raft Server is the Candidate
+*/
+
+func (rf * Raft) isCandidate() bool {
+    return rf.state == CANDIDATE
+}
