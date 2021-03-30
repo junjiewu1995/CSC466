@@ -21,6 +21,7 @@ import "sync"
 import "sync/atomic"
 import "../labrpc"
 import "fmt"
+import "time"
 // import "bytes"
 // import "../labgob"
 
@@ -50,7 +51,7 @@ type ApplyMsg struct {
 
 type state int
 const  None state = -1
-const  Leader state = 0
+const  LEADER state = 0
 const  CANDIDATE state = 1
 const  FOLLOWER state = 2
 
@@ -89,12 +90,14 @@ type Raft struct {
     voteCount int
 
     chanApply chan ApplyMsg
+
+    chanHeartBeat chan struct{}
 }
 
 /**
   * if the current server is the leader
 */
-func (rf *Raft) isLeader() bool {  return rf.state == Leader }
+func (rf *Raft) isLeader() bool {  return rf.state == LEADER }
 
 
 // return currentTerm and whether this server
@@ -263,12 +266,59 @@ func (rf *Raft) killed() bool {
 	return z == 1
 }
 
+
+func (rf *Raft) NewElection () {
+
+    rf.mu.Lock()
+    rf.currentTerm += 1
+    /* The Candidate Vote for itself */
+    rf.votedFor = rf.me
+    /* The Vote Counts for 1 */
+    rf.voteCount = 1
+    /* Later Persist the State */
+    rf.mu.Unlock()
+
+    /* The cadidates should boradcast to the other followers */
+
+    /* select the Leader at here */
+
+}
+
+/**
+ * Multiple threads race conditions
+ * The methiods assists the server compete for candidates
+ * Once there is a candidate, the Candidat starts to broadcast to other followers
+ * Then the leader is selected
+*/
+
 func (rf *Raft) statesRunLoop() {
 
     /* Decides the cadidates */
     for {
         switch rf.state {
-            
+
+            /* 1st step select the cadidates */
+            case FOLLOWER:
+                /* The timeout sends by channels assists the cadidates selections */
+                select {
+                    /* 1st time out helps the follower becomes the cadidates
+                       the time out channel could be implement in a timeout
+                       funciton and sends the data back through the channel
+                    */
+                    case <- time.After(electionTimeout()):
+                        rf.state = CANDIDATE
+                    /*
+                       2nd time out for the leaders to broadcast for making sure
+                       the followers server are still alive
+                    */
+                    case <- rf.chanHeartBeat:
+                        fmt.Println("HearBeat ...")
+                }
+            case CANDIDATE:
+
+            /* 2nd step select the leader */
+            case LEADER:
+
         }
     }
 }
@@ -313,6 +363,8 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	/* None Last Appied Msg*/
 	rf.lastApplied = 0
+
+	rf.chanHeartBeat = make(chan struct{}, 100)
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
