@@ -92,6 +92,7 @@ type Raft struct {
     chanApply chan ApplyMsg
 
     chanHeartBeat chan struct{}
+    chanBeElected chan struct{}
 }
 
 /**
@@ -183,6 +184,7 @@ type RequestVoteReply struct {
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
 
+
 }
 
 //
@@ -273,17 +275,28 @@ func (rf *Raft) killed() bool {
 */
 func (rf *Raft) sendRequestVoteAndProcessReply(i int, args RequestVoteArgs) {
 
-    
+    reply := RequestVoteReply{}
 
+    /* Send the Broadcast Information to the target Raft Servers */
+    rf.sendRequestVote(i, &args, &reply)
+
+    rf.mu.Lock()
+    defer rf.mu.Unlock()
+
+    rf.voteCount += 1
 }
 
 
 func (rf *Raft) broadcastRequestVote() {
-    var args RequestVoteArgs
+
+    /*
+     * Set the Request Args about current Term
+    */
+    args := RequestVoteArgs{}
 
     rf.mu.Lock()
-    args.Term = rf.currentTerm
-    args.CandidateId = rf.me
+    args.Term = rf.currentTerm // Current Term
+    args.CandidateId = rf.me // Candidate Id
     rf.mu.Unlock()
 
     for i := range rf.peers {
@@ -306,9 +319,22 @@ func (rf *Raft) NewElection () {
     rf.mu.Unlock()
 
     /* The cadidates should boradcast to the other followers */
+    go rf.broadcastRequestVote()
 
     /* select the Leader at here */
+    select {
+        case <- time.After(electionTimeout()):
+        /* If times exceeds the server becomes Followers */
+        case <- rf.chanHeartBeat:
+            rf.state = FOLLOWER
+        case <- rf.chanBeElected:
+            rf.state = LEADER
+    }
+}
 
+
+func (rf *Raft) LeaderHeartBeat() {
+    <- time.After(HeartBeat)
 }
 
 /**
@@ -348,7 +374,7 @@ func (rf *Raft) statesRunLoop() {
                 rf.NewElection()
             /* 2nd step select the leader */
             case LEADER:
-
+                rf.LeaderHeartBeat()
         }
     }
 }
@@ -366,8 +392,6 @@ func (rf *Raft) statesRunLoop() {
 //
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
-
-    fmt.Println("Raft Initialization ...")
 
 	rf := &Raft{}
 	rf.peers = peers
@@ -395,6 +419,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.lastApplied = 0
 
 	rf.chanHeartBeat = make(chan struct{}, 100)
+	rf.chanBeElected = make(chan struct{}, 100)
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
