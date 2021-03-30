@@ -44,6 +44,7 @@ type GoFishServer struct {
 	Deck			      []Card
 	PlayerTurnIndex       int
 	TotalPlayers          int
+	WinnerPlayerId        int
 
 }
 
