@@ -68,17 +68,12 @@ func (gfs *GoFishServer)LoadConfiguration (file string) (GameConfig, error) {
 
 /**
  *  Players Set Up
+ *  Assign 7 Cards for Each Players
 */
 
 func (gfs *GoFishServer) PlayersSetUp (cardNum int) {
-    fmt.Println("2 players setting up begin ...")
-
-    /* Assign 7 Cards for Each Players */
     for range gfs.Players {
-        for i := 0; i < cardNum; i++ {
-            gfs.drawCards(i)
-        }
-        /* Increase the TurnIndex Number */
+        for i := 0; i < cardNum; i++ { gfs.drawCards(i) }
         gfs.PlayerTurnIndex += 1
     }
     gfs.PlayerTurnIndex = 0
@@ -95,7 +90,6 @@ func (gfs *GoFishServer) drawCards(i int) error {
      card := gfs.Deck[0]
      gfs.Deck = gfs.Deck[1:]
      card.Used = true
-     /* Give the Card to the assignPlayer */
      gfs.Players[gfs.PlayerTurnIndex].Hand = append(gfs.Players[gfs.PlayerTurnIndex].Hand, card)
 
      return nil
@@ -106,31 +100,22 @@ func (gfs *GoFishServer) drawCards(i int) error {
  * Players Enter Game
 */
 func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestReply) error {
-
-    /* Lock for each players */
     gfs.Mu.Lock()
     defer gfs.Mu.Unlock()
 
-    /* No More than 7 players */
-    if gfs.PlayerCounter < 7 {
-        /* Add up the Player number */
+    if gfs.PlayerCounter < 6 {
         reply.ID = gfs.PlayerCounter
-
-        /* Appends the players */
         gfs.Players = append(gfs.Players, Player{ID: gfs.PlayerCounter})
-
-        /* add up the player counter */
         gfs.PlayerCounter += 1
     }
-    /* Once the Player meets the decides number Game starts */
+
     if gfs.PlayerCounter == gfs.TotalPlayers { gfs.gameStart() }
     return nil
 }
 
 
 /*
- * gameStart => LoadCards()
- *           => AssignCards()
+ * gameStart [1] LoadCards() [2] AssignCards()
 */
 
 func (gfs *GoFishServer) gameStart () {
@@ -144,20 +129,16 @@ func (gfs *GoFishServer) gameStart () {
 /**
  * game initilization
 */
-
 func (gfs *GoFishServer) assignCard () error {
 
     /* Check the Player Number */
     switch {
-
         case gfs.PlayerCounter == 1:
             gfs.dead = true
-
         case gfs.PlayerCounter == 2:
-            gfs.PlayersSetUp(7) // 2 players assign 7 cards
-
+            gfs.PlayersSetUp(7)
         default:
-            gfs.PlayersSetUp(5) // More than 2 players assign 5 cards
+            gfs.PlayersSetUp(5)
     }
     return nil
 }
@@ -165,9 +146,9 @@ func (gfs *GoFishServer) assignCard () error {
 /**
  * The gameOver function would check the Status of the game
 */
-
-func (gfs *GoFishServer) GetStatusOfGame () {
-
+func (gfs *GoFishServer) GetStatusOfGame () error {
+    fmt.Println(" Get Status of the Game ...")
+    return nil
 }
 
 
@@ -177,10 +158,10 @@ func (gfs *GoFishServer) GetStatusOfGame () {
 func (gfs *GoFishServer) GoFish () {
     
     //draw a card from the deck, removing it from gfs.Deck
-    drawnCard = gfs.Deck[0]
-    gfs.Deck = gfs.Deck[1:]
-    
-    return drawnCard
+    //     Card = gfs.Deck[0]
+    //     gfs.Deck = gfs.Deck[1:]
+    //
+    //     return Card
 }
 
 
@@ -195,21 +176,21 @@ func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestRepl
 	gfs.Mu.Lock()
 	defer gfs.Mu.Unlock()
 
-    if ask.goFish {
-        reply.GoFishGame = true
-        reply.PlayerTurnIndex = gfs.PlayerTurnIndex
-        return nil
-    }
+//     if ask.goFish {
+//         reply.GoFishGame = true
+//         reply.PlayerTurnIndex = gfs.PlayerTurnIndex
+//         return nil
+//     }
 
 	reply.GoFishGame = true
 
-	if gfs.PlayerTurnIndex == TotalPlayers - 1 {
-	    gfs.PlayerTurnIndex = 0
-	} else {
-	    gfs.PlayerTurnIndex += 1
-	}
+// 	if gfs.PlayerTurnIndex == TotalPlayers - 1 {
+// 	    gfs.PlayerTurnIndex = 0
+// 	} else {
+// 	    gfs.PlayerTurnIndex += 1
+// 	}
 
-	reply.PlayerTurnIndex = gfs.PlayerTurnIndex
+// 	reply.PlayerTurnIndex = gfs.PlayerTurnIndex
 
 	reply.Turn = 1
 	return nil
@@ -223,20 +204,10 @@ func (gfs *GoFishServer) LoadCard() error {
 	//Create 52 new cards, not shuffled, in gfs.Deck
 	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "clubs"})
-	}
-
-	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "diamonds"})
-	}
-
-	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "hearts"})
-	}
-
-	for i := 0; i < 13; i++ {
 		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "spades"})
 	}
-
 	//shuffle gfs.Deck
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(gfs.Deck), func(i, j int) {gfs.Deck[i], gfs.Deck[j] = gfs.Deck[j], gfs.Deck[i] })
@@ -260,59 +231,48 @@ func (gfs *GoFishServer) server() {
 }
 
 
-func (gfs *GoFishServer)serverStateSet() *GoFishServer {
+/**
+ * GameOver
+ */
+func (gfs *GoFishServer)gameOver() bool {
 
-    /* Construct the Server Struct */
-    gfs := GoFishServer{}
+    return gfs.dead
+}
+
+func (gfs *GoFishServer)StateSet () *GoFishServer {
+
     gfs.Deck = []Card{}
-
-    /* Intialize the Game Variables */
+    /* gfs vars */
     gfs.TotalPlayers = 0
     gfs.PlayerCounter = 0
     gfs.PlayerTurnIndex = 0
 
-	return gfs
-}
-
-/**
- * GameOver
- */
-
-func (gfs *GoFishServer)gameOver() bool {
-
-    for k, v range gfs.Players {
-        // If the current Players Hand reach full
-        if len(v.Pairs) == 13: gfs.dead = true
-    }
-    return gfs.dead
+    return gfs
 }
 
 /* Create a Game Server */
-func StartServer () *GoFishServer {
+func StartServer () {
+
+    gfs := GoFishServer{}
+    gfs.StateSet() // set the states
 
     /* Construct the Game Config file */
 	config, _ := gfs.LoadConfiguration("../game.config.json")
-
 	i1, err := strconv.Atoi(config.Gameset.HostPlayers)
     if err == nil { gfs.TotalPlayers = i1 }
 
 	/* Calling server method */
 	gfs.server()
-    rep := gfs.serverStateSet()
 
     /* Checking the game is over or not periodly */
     for !gfs.gameOver() {
         fmt.Println("Check the Game Status in 1 sec ...")
-        /* Check the game status */
-        gfs.GetStatusOfGame()
+        gfs.GetStatusOfGame() /* Check the game status */
         time.Sleep( 1 * time.Second)
     }
-
-	return rep
 }
 
 /* Main Function */
 func main () {
-    /* Start to Run Go Fish Server */
-	StartServer()
+	StartServer() /* Start to Run Go Fish Server */
 }
