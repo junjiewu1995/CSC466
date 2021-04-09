@@ -19,7 +19,7 @@ const (
 	// minElectionInterval 选举过期的最大时间间隔，ms
 	maxElection = minElection * 8 / 5
 
-	// 按照论文 5.6 Timing and availability 的要求
+	// 按照论文 Timing and availability 的要求
 	// heartBeat 和 minElection 需要相差了一个数量级
 )
 
