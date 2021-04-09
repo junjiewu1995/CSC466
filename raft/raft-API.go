@@ -194,7 +194,6 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isLeader bool
 	// Your code here (2A).
-
 	term = rf.currentTerm
 	isLeader = rf.isLeader()
 
@@ -214,7 +213,6 @@ func (rf *Raft) GetState() (int, bool) {
 // ApplyMsg, but set CommandValid to false for these other uses.
 //
 type ApplyMsg struct {
-    
 	CommandValid bool // CommandValid = true 表示， 此消息是用于应用 
 	CommandIndex int  // Command 所在的 logEntry.logIndex 值
 	Command      interface{}

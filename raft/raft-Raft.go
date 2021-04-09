@@ -46,7 +46,6 @@ type Raft struct {
 	matchIndex []int
 
 	/* ↑ state of raft on Figure 2 ↑ */
-
 	state     state
 	voteCount int
 
