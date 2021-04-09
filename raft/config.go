@@ -58,14 +58,14 @@ type config struct {
 var ncpu_once sync.Once
 
 func make_config(t *testing.T, n int, unreliable bool) *config {
-
+    
 	ncpu_once.Do(func() {
 		if runtime.NumCPU() < 2 {
 			fmt.Printf("warning: only one CPU, which may conceal locking bugs\n")
 		}
 		rand.Seed(makeSeed())
 	})
-
+    
 	runtime.GOMAXPROCS(4)
 	cfg := &config{}
 	cfg.t = t
@@ -77,7 +77,7 @@ func make_config(t *testing.T, n int, unreliable bool) *config {
 	cfg.saved = make([]*Persister, cfg.n)
 	cfg.endnames = make([][]string, cfg.n)
 	cfg.logs = make([]map[int]interface{}, cfg.n)
-
+	
     cfg.start = time.Now()
 
 	cfg.setunreliable(unreliable)
@@ -86,7 +86,6 @@ func make_config(t *testing.T, n int, unreliable bool) *config {
 	// create a full set of Rafts.
 	for i := 0; i < cfg.n; i++ {
 		cfg.logs[i] = map[int]interface{}{}
-		/* create the followers */
 		cfg.start1(i)
 	}
 
@@ -140,14 +139,14 @@ func (cfg *config) start1(i int) {
 	// a fresh set of outgoing ClientEnd names.
 	// so that old crashed instance's ClientEnds can't send.
 	cfg.endnames[i] = make([]string, cfg.n)
-
+	
     for j := 0; j < cfg.n; j++ {
 		cfg.endnames[i][j] = randstring(20)
 	}
 
 	// a fresh set of ClientEnds.
 	ends := make([]*labrpc.ClientEnd, cfg.n)
-
+    
 	for j := 0; j < cfg.n; j++ {
 		ends[j] = cfg.net.MakeEnd(cfg.endnames[i][j])
 		cfg.net.Connect(cfg.endnames[i][j], j)
@@ -302,16 +301,16 @@ func (cfg *config) setlongreordering(longrel bool) {
 
 // 检查是否确实仅存在一个领导人
 // 为了测试重新选举，所以会多尝试几次查找
-func (cfg *config) checkOneLeader() int {
-
-    // Find the Leader by iterations
+func (cfg *config) checkOneLeader() int {	
+    
+    // 多迭代几次尝试寻找领导人
     for iters := 0; iters < 10; iters++ {
 		ms := 450 + (rand.Int63() % 100)
         time.Sleep(time.Duration(ms) * time.Millisecond)
-
+		
         leaders := make(map[int][]int)
         for i := 0; i < cfg.n; i++ {
-			if cfg.connected[i] {
+			if cfg.connected[i] { 
 				if term, leader := cfg.rafts[i].GetState(); leader { // 赋值，条件判断
 					leaders[term] = append(leaders[term], i)
                 }
@@ -327,10 +326,10 @@ func (cfg *config) checkOneLeader() int {
 			if term > lastTermWithLeader { lastTermWithLeader = term }
 		}
 
-        // Find out the newest leader
+        // 找到最新的领导人
 		if len(leaders) != 0 { return leaders[lastTermWithLeader][0] }
 	}
-
+    
 	cfg.t.Fatalf("expected one leader, got none")
 	return -1
 }
