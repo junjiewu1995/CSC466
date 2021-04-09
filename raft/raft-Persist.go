@@ -15,6 +15,7 @@ import (
 func (rf *Raft) persist() {
 	// Your code here (2C).
 	// Example:
+	// log compression
 	w := new(bytes.Buffer)
 	e := labgob.NewEncoder(w)
 	e.Encode(rf.currentTerm)

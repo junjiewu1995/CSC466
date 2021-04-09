@@ -17,6 +17,10 @@ func (a AppendEntriesArgs) String() string {
 		a.LeaderID, a.Term, a.PrevLogIndex, a.PrevLogTerm, a.LeaderCommit, a.Entries)
 }
 
+/*
+ * Define the AppendTentriesArgs
+*/
+
 func (rf *Raft) newAppendEntriesArgs(server int) AppendEntriesArgs {
 	prevLogIndex := rf.nextIndex[server] - 1
 	baseIndex := rf.getBaseIndex()
@@ -30,7 +34,10 @@ func (rf *Raft) newAppendEntriesArgs(server int) AppendEntriesArgs {
 	}
 }
 
-// AppendEntriesReply 是 flower 回复 leader 的内容
+/*
+ * Define the AppendTentriesReply
+ * AppendEntriesReply 是 flower 回复 leader 的内容
+ */
 type AppendEntriesReply struct {
 	Term      int  // 回复者的 term
 	Success   bool // 返回 true，如果被调用的 rf.logs 真的 append  entries
@@ -41,6 +48,10 @@ func (r AppendEntriesReply) String() string {
 	return fmt.Sprintf("appendEntriesReply{T%d, Success:%t, NextIndex:%d}",
 		r.Term, r.Success, r.NextIndex)
 }
+
+/**
+ * Define in the paper
+*/
 
 func (rf *Raft) sendAppendEntries(server int, args AppendEntriesArgs, reply *AppendEntriesReply) bool {
 	return rf.peers[server].Call("Raft.AppendEntries", args, reply)
@@ -81,7 +92,7 @@ func (rf *Raft) broadcastAppendEntries() {
 	for id := range rf.peers {
 		if id != rf.me && rf.isLeader() {
 			args := rf.newAppendEntriesArgs(id)
-			go rf.sendAppendEntriesAndDealReply(id, args)
+			go rf.sendAppendEntriesAndDealReply(id, args) // send the entry broadcast
 		}
 	}
 }
@@ -91,7 +102,7 @@ func (rf *Raft) sendAppendEntriesAndDealReply(id int, args AppendEntriesArgs) {
 
 	//DPrintf("%s AppendEntries to R%d with %s", rf, id, args)
 
-	ok := rf.sendAppendEntries(id, args, &reply)
+	ok := rf.sendAppendEntries(id, args, &reply) // To the other servers=
 	if !ok { return }
 
 	rf.mu.Lock()
@@ -161,6 +172,10 @@ func (rf *Raft) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply)
 
 	baseIndex := rf.getBaseIndex()
 
+	/*
+	 * Deal with the servers crash situations
+	*/
+
 	if args.PrevLogIndex > baseIndex {
 		term := rf.logs[args.PrevLogIndex-baseIndex].LogTerm
 		if args.PrevLogTerm != term {
@@ -174,9 +189,13 @@ func (rf *Raft) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply)
 		}
 	}
 
+	/*
+	 * Receive the message from appendEntries args, and append the servers
+	*/
+
 	if args.PrevLogIndex >= baseIndex {
 		rf.logs = rf.logs[:args.PrevLogIndex+1-baseIndex]
-		rf.logs = append(rf.logs, args.Entries...)
+		rf.logs = append(rf.logs, args.Entries...) // append entries
 		reply.Success = true
 		reply.NextIndex = rf.getLastIndex() + 1
 	}
