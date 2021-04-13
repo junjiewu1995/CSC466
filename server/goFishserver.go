@@ -224,7 +224,7 @@ func (gfs *GoFishServer) gameOver() bool {
 				gfs.WinnerPlayerId = k
 			}
 		}
-		fmt.Println(gfs.WinnerPlayerId)
+		fmt.Println("The winner is : ", gfs.WinnerPlayerId)
 	}
 
     return gfs.dead
