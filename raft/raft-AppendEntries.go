@@ -99,7 +99,6 @@ func (rf *Raft) broadcastAppendEntries() {
 
 func (rf *Raft) sendAppendEntriesAndDealReply(id int, args AppendEntriesArgs) {
 	var reply AppendEntriesReply
-
 	//DPrintf("%s AppendEntries to R%d with %s", rf, id, args)
 
 	ok := rf.sendAppendEntries(id, args, &reply) // To the other servers=
@@ -140,7 +139,6 @@ func (rf *Raft) sendAppendEntriesAndDealReply(id int, args AppendEntriesArgs) {
 func (rf *Raft) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
-
 	// REVIEW: 按照 figure 2 中的内容来，重新编写此函数
 	reply.Success = false
 
@@ -152,7 +150,6 @@ func (rf *Raft) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply)
 	}
 
 	defer rf.persist()
-
 	rf.chanHeartBeat <- struct{}{}
 
 	DPrintf("%s 收到了真实有效的信号 %s", rf, args)
@@ -172,10 +169,6 @@ func (rf *Raft) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply)
 
 	baseIndex := rf.getBaseIndex()
 
-	/*
-	 * Deal with the servers crash situations
-	*/
-
 	if args.PrevLogIndex > baseIndex {
 		term := rf.logs[args.PrevLogIndex-baseIndex].LogTerm
 		if args.PrevLogTerm != term {
@@ -192,7 +185,6 @@ func (rf *Raft) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply)
 	/*
 	 * Receive the message from appendEntries args, and append the servers
 	*/
-
 	if args.PrevLogIndex >= baseIndex {
 		rf.logs = rf.logs[:args.PrevLogIndex+1-baseIndex]
 		rf.logs = append(rf.logs, args.Entries...) // append entries

@@ -1,25 +1,21 @@
 package main
 
+import "C"
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
-	"sync"
-	"math/rand"
-	"time"
-	"encoding/json"
+	"sort"
 	"strconv"
+	"sync"
+	"time"
 )
 
 import . "../CallingUtilities"
-
-
-/**
- * Server should know everthing about clients
-*/
 
 type GameConfig struct {
     Gameset struct {
@@ -27,16 +23,7 @@ type GameConfig struct {
     } `json:"gameset`
 }
 
-
-type Player struct {
-	ID 			int
-	Hand 		[]Card
-	Pairs 		[]Pairs
-	Opponents 	[]Player
-}
-
 type GoFishServer struct {
-
 	Mu 				      sync.Mutex
 	PlayerCounter 	      int
 	dead                  bool
@@ -45,179 +32,171 @@ type GoFishServer struct {
 	PlayerTurnIndex       int
 	TotalPlayers          int
 	WinnerPlayerId        int
-
+	Turn 				  int
+	Ready				  bool
+	score 				  []int
 }
 
-
-func (gfs *GoFishServer)LoadConfiguration (file string) (GameConfig, error) {
-
-    var config GameConfig
-    configFile, err := os.Open(file)
-
-    /* defer to the end and close the config file*/
-    defer configFile.Close()
-    if err != nil {
-        return config, err
-    }
-
-    jsonParser := json.NewDecoder(configFile)
-    err = jsonParser.Decode(&config)
-    return config, err
+type GameStatusArgs struct {
+	MatchPair			  string
 }
 
-
-/**
- *  Players Set Up
- *  Assign 7 Cards for Each Players
-*/
-
-func (gfs *GoFishServer) PlayersSetUp (cardNum int) {
-    for range gfs.Players {
-        for i := 0; i < cardNum; i++ { gfs.drawCards(i) }
-        gfs.PlayerTurnIndex += 1
-    }
-    gfs.PlayerTurnIndex = 0
-}
-
-
-/*
- * Player Draw Cards
-*/
-
-func (gfs *GoFishServer) drawCards(i int) error {
-
-     /* Draw one card from the Deck and renew the Deck */
-     card := gfs.Deck[0]
-     gfs.Deck = gfs.Deck[1:]
-     card.Used = true
-     gfs.Players[gfs.PlayerTurnIndex].Hand = append(gfs.Players[gfs.PlayerTurnIndex].Hand, card)
-
-     return nil
+type GameStatusReply struct {
+	CurrentPlayerId       int
+	TurnIdx 		      int
+	Finished 			  bool
+	Winner 				  int
+	Players 			  []Player
+	Turn 				  int
+	Ready				  bool
 }
 
 
 /**
- * Players Enter Game
-*/
-func (gfs *GoFishServer) EnterGame (playerask *CardRequest, reply *CardRequestReply) error {
-    gfs.Mu.Lock()
-    defer gfs.Mu.Unlock()
-
-    if gfs.PlayerCounter < 6 {
-        reply.ID = gfs.PlayerCounter
-        gfs.Players = append(gfs.Players, Player{ID: gfs.PlayerCounter})
-        gfs.PlayerCounter += 1
-    }
-
-    if gfs.PlayerCounter == gfs.TotalPlayers { gfs.gameStart() }
-    return nil
-}
-
-
-/*
- * gameStart [1] LoadCards() [2] AssignCards()
-*/
-
-func (gfs *GoFishServer) gameStart () {
-    fmt.Println("Game Initializes Environments ... ")
-    /* Load Cards */
-    gfs.LoadCard()
-    /* Assign Initialized Cards */
-    gfs.assignCard()
-}
-
-/**
- * game initilization
-*/
-func (gfs *GoFishServer) assignCard () error {
-
-    /* Check the Player Number */
-    switch {
-        case gfs.PlayerCounter == 1:
-            gfs.dead = true
-        case gfs.PlayerCounter == 2:
-            gfs.PlayersSetUp(7)
-        default:
-            gfs.PlayersSetUp(5)
-    }
-    return nil
-}
-
-/**
- * The gameOver function would check the Status of the game
-*/
-func (gfs *GoFishServer) GetStatusOfGame () error {
-    fmt.Println(" Get Status of the Game ...")
-    return nil
+ * Load Configurations
+ */
+func (gfs *GoFishServer) LoadConfiguration (file string) (GameConfig, error) {
+	var config GameConfig
+	configFile, err := os.Open(file)
+	/* defer to the end and close the config file*/
+	defer configFile.Close()
+	if err != nil { return config, err }
+	jsonParser := json.NewDecoder(configFile)
+	err = jsonParser.Decode(&config)
+	return config, err
 }
 
 
 /**
  * If the player does not have the cards, it would return One Card for the Player
  */
-func (gfs *GoFishServer) GoFish () {
-    
-    //draw a card from the deck, removing it from gfs.Deck
-    //     Card = gfs.Deck[0]
-    //     gfs.Deck = gfs.Deck[1:]
-    //
-    //     return Card
-}
-
-
-/*
- * Once the Player call RequestForCard for a particular player
- * The server request the tartget Players' information
- * And return back to the Caller or Call Go Fish
-*/
-func (gfs *GoFishServer) RequestForCard(ask *CardRequest, reply *CardRequestReply) error {
-
-    // Check for Other Player's cards
-	gfs.Mu.Lock()
-	defer gfs.Mu.Unlock()
-
-//     if ask.goFish {
-//         reply.GoFishGame = true
-//         reply.PlayerTurnIndex = gfs.PlayerTurnIndex
-//         return nil
-//     }
-
-	reply.GoFishGame = true
-
-// 	if gfs.PlayerTurnIndex == TotalPlayers - 1 {
-// 	    gfs.PlayerTurnIndex = 0
-// 	} else {
-// 	    gfs.PlayerTurnIndex += 1
-// 	}
-
-// 	reply.PlayerTurnIndex = gfs.PlayerTurnIndex
-
-	reply.Turn = 1
-	return nil
-}
-
-//Fills gfs.Deck with 52 shuffled Cards
-func (gfs *GoFishServer) LoadCard() error {
-
-	cardValues := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}
-
-	//Create 52 new cards, not shuffled, in gfs.Deck
-	for i := 0; i < 13; i++ {
-		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "clubs"})
-		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "diamonds"})
-		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "hearts"})
-		gfs.Deck = append(gfs.Deck, Card{Value: cardValues[i], Suit: "spades"})
+func (gfs *GoFishServer) GoFish () (Card){
+	if len(gfs.Deck) == 0 {
+		return Card{Value: "-1"}
 	}
-	//shuffle gfs.Deck
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(gfs.Deck), func(i, j int) {gfs.Deck[i], gfs.Deck[j] = gfs.Deck[j], gfs.Deck[i] })
-    return nil
+	card := gfs.Deck[0]
+	gfs.Deck = gfs.Deck[1:]
+	return card
+}
+
+
+func (gfs *GoFishServer) CallForCards(ask *CardRequest, reply *CardRequestReply) error {
+	fmt.Println("Player ask for cards : ", ask.Target)
+	gfs.Mu.Lock()
+	reply.GoFish = true
+	// Loop through target player's hand and find matching cards
+	var toRemove []int
+	var cardPool = gfs.Players[ask.Target].Hand
+	for k, v := range cardPool {
+		if v.Value == ask.Value {
+			fmt.Println("Find the Match ...")
+			reply.GoFish = false
+			reply.Cards = append(reply.Cards, v)
+			toRemove = append(toRemove, k)
+		}
+	}
+	fmt.Println("I am Here")
+	if reply.GoFish { // No card found
+		fmt.Println("Not Find Match ...")
+		reply.Cards = append(reply.Cards, gfs.GoFish())
+	} else { // Target player has 1 or more matching cards
+		// remove the target players hand
+		sort.Ints(toRemove)
+		for i, v := range toRemove {
+			gfs.Players[ask.Target].Hand = append(gfs.Players[ask.Target].Hand[:v-i], gfs.Players[ask.Target].Hand[v+1-i:]...)
+		}
+	}
+	gfs.Mu.Unlock()
+	fmt.Println("ENd")
+	return nil
 }
 
 
 /**
- * RPC server interaction
+ * The gameOver function would check the Status of the game
+ */
+func (gfs *GoFishServer) GetStatusOfGame (ask *GameStatusArgs, reply *GameStatusReply) error {
+	gfs.Mu.Lock()
+	defer gfs.Mu.Unlock()
+	fmt.Println("Get Game Status ...")
+	reply.CurrentPlayerId  = gfs.PlayerTurnIndex
+	reply.Finished = gfs.gameOver()
+	reply.Turn = gfs.Turn
+	reply.Players = gfs.Players
+	reply.Ready = gfs.Ready
+
+	return nil
+}
+
+/*
+ * Call For the End
 */
+
+func (gfs *GoFishServer) CallForEnd (ask *PlayPairRequest, reply *PlayPairReply) error {
+
+	gfs.Mu.Lock()
+	defer gfs.Mu.Unlock()
+
+	// Update the player's matching Pairs / passed arrays of pairs
+	if ask.Pair != nil && len(ask.Pair) != 0 {
+		gfs.Players[ask.Owner].Pair = append(gfs.Players[ask.Owner].Pair, ask.Pair...)
+		gfs.score[ask.Owner] += 1
+		fmt.Printf("Player %d my pairs: %v\n\n", ask.Owner,  gfs.Players[ask.Owner].Pair)
+	}
+
+	// Update the player's hand
+	gfs.Players[ask.Owner].Hand = ask.Hand
+
+	// Determine next player
+	gfs.PlayerTurnIndex++
+	if gfs.PlayerTurnIndex  >= gfs.TotalPlayers {
+		gfs.PlayerTurnIndex  = 0
+	}
+	ask.Pair = nil
+	return nil
+}
+
+
+/**
+ * Players Enter Game
+*/
+func (gfs *GoFishServer) EnterGame (ask *CardRequest, reply *CardRequestReply) error {
+    gfs.Mu.Lock()
+
+    if gfs.PlayerCounter < 6 {
+        reply.ID = gfs.PlayerCounter
+		fmt.Println("Player", gfs.PlayerTurnIndex, "Enter Game ...")
+        gfs.Players = append(gfs.Players, Player{ID: gfs.PlayerCounter})
+		gfs.score = append(gfs.score, 0)
+		fmt.Println("*****")
+		for k,v := range(gfs.score){
+			fmt.Println(k, v)
+		}
+		fmt.Println("*****")
+        gfs.PlayerCounter += 1
+    } else {
+		reply.ID = -1
+	}
+
+    if gfs.Equals(gfs.PlayerCounter, gfs.TotalPlayers) {
+    	/* Loading Cards */
+		fmt.Println("Load cards ...")
+		time.Sleep(1 * time.Second)
+		gfs.LoadCard()
+		/* Assign Cards */
+		fmt.Println("Assign cards ...")
+		time.Sleep(1 * time.Second)
+		gfs.assignCard()
+
+		gfs.Ready = true
+    }
+
+	gfs.Mu.Unlock()
+    return nil
+}
+
+
+/* RPC server interaction */
 func (gfs *GoFishServer) server() {
 	rpc.Register(gfs)
 	rpc.HandleHTTP()
@@ -231,30 +210,30 @@ func (gfs *GoFishServer) server() {
 }
 
 
-/**
- * GameOver
- */
-func (gfs *GoFishServer)gameOver() bool {
+/* Game Over */
+func (gfs *GoFishServer) gameOver() bool {
+
+	if len(gfs.Deck) == 0 && gfs.Ready {
+		fmt.Println("Game Over ...")
+		gfs.dead = true
+		max := 0
+		for k, v := range gfs.score {
+			// winner
+			if max < v {
+				max = v
+				gfs.WinnerPlayerId = k
+			}
+		}
+		fmt.Println(gfs.WinnerPlayerId)
+	}
 
     return gfs.dead
 }
 
-func (gfs *GoFishServer)StateSet () *GoFishServer {
-
-    gfs.Deck = []Card{}
-    /* gfs vars */
-    gfs.TotalPlayers = 0
-    gfs.PlayerCounter = 0
-    gfs.PlayerTurnIndex = 0
-
-    return gfs
-}
-
 /* Create a Game Server */
 func StartServer () {
-
     gfs := GoFishServer{}
-    gfs.StateSet() // set the states
+    gfs.StateSet()
 
     /* Construct the Game Config file */
 	config, _ := gfs.LoadConfiguration("../game.config.json")
@@ -264,15 +243,10 @@ func StartServer () {
 	/* Calling server method */
 	gfs.server()
 
-    /* Checking the game is over or not periodly */
-    for !gfs.gameOver() {
-        fmt.Println("Check the Game Status in 1 sec ...")
-        gfs.GetStatusOfGame() /* Check the game status */
-        time.Sleep( 1 * time.Second)
-    }
+	/* Checking the game is over or not periodly */
+    for !gfs.gameOver() { time.Sleep( 1 * time.Second) }
 }
 
-/* Main Function */
 func main () {
 	StartServer() /* Start to Run Go Fish Server */
 }

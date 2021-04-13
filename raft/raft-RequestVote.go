@@ -104,6 +104,7 @@ func (rf *Raft) broadcastRequestVote() {
 func (rf *Raft) sendRequestVoteAndDealReply(i int, args RequestVoteArgs) {
 	var reply RequestVoteReply
 	DPrintf("%s RequestVote to %d", rf, i)
+
 	ok := rf.sendRequestVote(i, &args, &reply)
 	if !ok { return }
 	rf.mu.Lock()
